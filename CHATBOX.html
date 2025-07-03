@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Gemini AI Chat Widget</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Global Styles & Body Setup */
+    body {
+      display: flex;
+      justify-content: center; /* Changed to center to balance vertical space */
+      align-items: center; /* Changed to center to balance vertical space */
+      min-height: 100vh;
+      margin: 0;
+      background-color: #f0f2f5;
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #1c1e21;
+      overflow: hidden; /* Prevent body scroll */
+
+      padding-bottom: 95px; /* This creates the space at the very bottom */
+    }
+
+    /* Main Chat Container */
+    .chat-container {
+      width: 100%;
+      max-width: 400px;
+      height: calc(100vh - 50px); /* Adjust height to account for body padding-bottom */
+      height: calc(100dvh - 50px); /* Use dvh for better mobile support */
+      display: flex;
+      flex-direction: column;
+      background-color: #ffffff;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      border-radius: 0; /* Full screen on mobile */
+      overflow: hidden; /* Hide anything outside the container */
+      position: relative; /* For absolute positioning of input area */
+    }
+
+    /* Chat Messages Display Area */
+    #chatbox {
+      flex-grow: 1; /* Takes up available space */
+      padding: 15px;
+      overflow-y: auto; /* THIS MAKES IT SCROLLABLE */
+      background-color: #f0f2f5;
+
+      display: flex;
+      flex-direction: column-reverse; /* New messages appear at bottom */
+      justify-content: flex-start; /* Keep content at the bottom as new items added */
+
+      gap: 10px; /* Space between messages */
+    }
+
+    /* Individual Message Styling */
+    .message {
+      display: flex;
+      max-width: 80%;
+    }
+
+    .message.user {
+      align-self: flex-end;
+    }
+
+    .message.gemini {
+      align-self: flex-start;
+    }
+
+    .message-bubble {
+      padding: 10px 15px;
+      border-radius: 20px;
+      line-height: 1.4;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+
+    .message.user .message-bubble {
+      background-color: #0084ff;
+      color: white;
+      border-bottom-right-radius: 2px;
+    }
+
+    .message.gemini .message-bubble {
+      background-color: #e4e6eb;
+      color: #1c1e21;
+      border-bottom-left-radius: 2px;
+    }
+
+    /* Input Area - Fixed at the Bottom */
+    .input-area {
+      position: absolute; /* Position relative to chat-container */
+      bottom: 0; /* Stick to the bottom */
+      left: 0;
+      right: 0;
+      display: flex;
+      padding: 10px;
+      background-color: #ffffff;
+      border-top: 1px solid #e0e0e0;
+      align-items: center;
+      box-sizing: border-box; /* Include padding in width/height */
+      z-index: 10; /* Ensure it stays on top of messages */
+    }
+
+    #input {
+      flex-grow: 1;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 20px;
+      background-color: #f0f2f5;
+      color: #1c1e21;
+      font-size: 16px;
+      outline: none;
+      margin-right: 10px;
+    }
+
+    #input::placeholder {
+        color: #8a8a8a;
+    }
+
+    #send {
+      background-color: transparent;
+      color: #0084ff;
+      border: none;
+      font-size: 16px;
+      font-weight: bold;
+      padding: 8px 12px;
+      cursor: pointer;
+      outline: none;
+      transition: color 0.2s ease-in-out;
+    }
+
+    #send:hover {
+      color: #0056b3;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .chat-container {
+        border-radius: 0; /* Full screen on small devices */
+        /* height already adjusted with calc() */
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div id="chatbox"></div>
+    <div class="input-area">
+      <input type="text" id="input" placeholder="Message...">
+      <button id="send">Send</button>
+    </div>
+  </div>
+
+  <script>
+    const chatbox = document.getElementById("chatbox");
+    const input = document.getElementById("input");
+    const send = document.getElementById("send");
+
+    function addMessage(sender, message) {
+      const messageDiv = document.createElement('div');
+      messageDiv.classList.add('message', sender);
+      const bubbleDiv = document.createElement('div');
+      bubbleDiv.classList.add('message-bubble');
+      bubbleDiv.textContent = message;
+      
+      messageDiv.appendChild(bubbleDiv);
+      chatbox.prepend(messageDiv);
+
+      adjustChatboxPadding();
+
+      chatbox.scrollTop = chatbox.scrollHeight; 
+    }
+
+    function adjustChatboxPadding() {
+      const inputAreaHeight = document.querySelector('.input-area').offsetHeight;
+      chatbox.style.paddingBottom = `${inputAreaHeight + 15}px`; 
+    }
+
+    const conversationHistory = [];
+
+    send.onclick = async () => {
+      const userMessage = input.value.trim();
+      if (!userMessage) return;
+
+      addMessage('user', userMessage);
+      input.value = "";
+
+      conversationHistory.push({ role: 'user', parts: [{ text: userMessage }] });
+
+      try {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=AIzaSyAFakgl0T1-HZdVRPmUiPis7dcLbtskIcE", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'system',
+                parts: [{ text: `Ikaw ay si **Dexie AI**, isang AI na nagtatrabaho para sa **Monetize Community Task Digital Explorer (MCTDEX)**. Ang iyong layunin ay magbigay ng impormasyon tungkol sa MCTDEX at mga serbisyo nito, at sumagot sa mga tanong ng user sa paraang magalang, palakaibigan, at tulungin ang user sa lahat ng paraan na kaya mo. Gumamit ka ng Tagalog o Taglish sa iyong mga sagot at mga salitang angkop sa kultura ng Pilipinas. Narito ang overview ng MCTDEX Digital Services:
+
+**MCTDEX Digital Service Overview:**
+Ang Monetize Community Task Digital Explorer ay ang premier partner para sa cutting-edge AI-driven services, advanced automation, at custom digital solutions na idinisenyo para palakasin ang mga negosyo.
+
+**Mga Serbisyo:**
+* AI-powered Chatbots and Virtual Assistants
+* Comprehensive Data Analytics and Reporting
+* Bespoke Software Development
+* Targeted Digital Marketing Strategies
+* Efficient Tasker and Workforce Management Systems
+* Cloud Solutions and Infrastructure
+
+**Misyon ng MCTDEX:**
+Ang aming misyon sa MCTDEX ay baguhin ang operational efficiency at itaguyod ang sustainable growth para sa aming mga kliyente sa pamamagitan ng strategic implementation ng intelligent at innovative technological solutions.
+
+Para sa karagdagang impormasyon, bisitahin ang: https://t.me/mctdexofficial
+
+Ang kasalukuyang petsa ay Hulyo 3, 2025.` }]
+              },
+              ...conversationHistory,
+              { role: 'user', parts: [{ text: userMessage }] }
+            ]
+          })
+        });
+
+        const data = await response.json();
+        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Pasensya na po, ako po si Dexie AI Assistant at hindi ko po naintindihan ang inyong tanong. Pakiulit po.";
+        
+        conversationHistory.push({ role: 'model', parts: [{ text: reply }] });
+
+        addMessage('gemini', reply);
+      } catch (error) {
+        console.error("Error fetching Gemini response:", error);
+        addMessage('gemini', "Pasensya na po, ako po si Dexie AI Assistant at nagkaroon ng problema. Paki-try na lang po ulit mamaya.");
+      }
+      chatbox.scrollTop = chatbox.scrollHeight;
+    };
+
+    input.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        send.click();
+      }
+    });
+
+    window.onload = () => {
+        addMessage('gemini', "Kumusta po! Ako po si **Dexie AI**. Paano po ako makakatulong sa inyo ngayon?"); // More specific Filipino greeting
+        adjustChatboxPadding();
+        chatbox.scrollTop = chatbox.scrollHeight;
+    };
+  </script>
+</body>
+</html>
